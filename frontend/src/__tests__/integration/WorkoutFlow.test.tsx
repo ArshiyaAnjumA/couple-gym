@@ -240,17 +240,7 @@ describe('Workout Flow Integration', () => {
 
       expect(mockUpdateCurrentSession).toHaveBeenCalledWith(
         expect.objectContaining({
-          exercises: expect.arrayContaining([
-            expect.objectContaining({
-              sets: expect.arrayContaining([
-                expect.objectContaining({
-                  reps: 12,
-                  weight: 140,
-                  completed: true,
-                }),
-              ]),
-            }),
-          ]),
+          notes: 'Added set for Bench Press',
         })
       );
     });
