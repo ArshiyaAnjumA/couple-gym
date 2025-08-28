@@ -53,8 +53,8 @@ class ApiService {
     }
   }
 
-  // HTTP client with token refresh
-  private async request<T>(
+  // HTTP client with token refresh - UPDATED to be public
+  async request<T>(
     url: string,
     options: RequestInit = {},
     skipAuth = false
