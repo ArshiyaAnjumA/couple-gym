@@ -594,19 +594,18 @@ class CouplesWorkoutAPITester:
         
         try:
             # Test create progress snapshot
-            snapshot_data = {
-                "snapshot_date": date.today().isoformat(),
-                "metrics": {
-                    "weight_kg": 75.5,
-                    "bodyfat_pct": 15.2,
-                    "waist_cm": 85.0,
-                    "workouts_completed_week": 4,
-                    "habits_completed_week": 6
-                }
+            metrics = {
+                "weight_kg": 75.5,
+                "bodyfat_pct": 15.2,
+                "waist_cm": 85.0,
+                "workouts_completed_week": 4,
+                "habits_completed_week": 6
             }
             
             response = self.make_request("POST", "/progress/snapshots", 
-                                       token=self.tokens["alex"], json=snapshot_data)
+                                       token=self.tokens["alex"], 
+                                       params={"snapshot_date": date.today().isoformat()},
+                                       json=metrics)
             
             if response.status_code == 200:
                 snapshot = response.json()
