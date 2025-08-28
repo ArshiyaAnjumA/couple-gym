@@ -305,7 +305,8 @@ describe('Workout Flow Integration', () => {
 
       expect(getByText('Workout Complete!')).toBeTruthy();
       expect(getByText(mockTemplate.name)).toBeTruthy();
-      expect(getByText('6 Sets')).toBeTruthy(); // 3 sets per exercise, 2 exercises
+      expect(getByText('2 Exercises')).toBeTruthy(); // 2 exercises in template
+      expect(getByText('500 kg')).toBeTruthy(); // Mock volume
       expect(getByText('45 min')).toBeTruthy();
 
       await act(async () => {
