@@ -49,10 +49,24 @@ const persist = <T extends object>(
 };
 
 export const useAuthStore = create<AuthStore>()(
-  immer((set, get) => ({
+  immer((set, get) => {
+    // Load initial state from MMKV
+    let initialUser = null;
+    let initialAuth = false;
+    try {
+      const storedUser = storage.getString('auth.user');
+      if (storedUser) {
+        initialUser = JSON.parse(storedUser);
+        initialAuth = true;
+      }
+    } catch (error) {
+      console.error('Error loading persisted auth state:', error);
+    }
+
+    return {
       // Initial state
-      user: null,
-      isAuthenticated: false,
+      user: initialUser,
+      isAuthenticated: initialAuth,
       isLoading: false,
       error: null,
 
