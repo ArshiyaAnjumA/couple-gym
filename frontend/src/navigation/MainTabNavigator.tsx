@@ -5,9 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 // Main screens
 import DashboardScreen from '../screens/main/DashboardScreen';
 import WorkoutNavigator from './WorkoutNavigator';
-import HabitsScreen from '../screens/main/HabitsScreen';
+import HabitNavigator from './HabitNavigator';
 import ProgressScreen from '../screens/main/ProgressScreen';
-import CoupleScreen from '../screens/main/CoupleScreen';
+import CoupleNavigator from './CoupleNavigator';
 import SettingsScreen from '../screens/main/SettingsScreen';
 
 export type MainTabParamList = {
