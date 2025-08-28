@@ -49,8 +49,7 @@ const persist = <T extends object>(
 };
 
 export const useAuthStore = create<AuthStore>()(
-  persist(
-    immer((set, get) => ({
+  immer((set, get) => ({
       // Initial state
       user: null,
       isAuthenticated: false,
