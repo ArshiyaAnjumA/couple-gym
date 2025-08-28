@@ -390,20 +390,23 @@ class CouplesWorkoutAPITester:
                 success = False
                 
             # Test create home workout session
-            home_session_data = {
+            home_exercises = [
+                {"name": "Push-ups", "sets": 3, "reps": 20},
+                {"name": "Squats", "sets": 3, "reps": 25},
+                {"name": "Plank", "duration_sec": 60}
+            ]
+            
+            home_params = {
                 "mode": "home",
                 "notes": "Home workout - bodyweight exercises",
-                "exercises_performed": [
-                    {"name": "Push-ups", "sets": 3, "reps": 20},
-                    {"name": "Squats", "sets": 3, "reps": 25},
-                    {"name": "Plank", "duration_sec": 60}
-                ],
                 "start_time": datetime.utcnow().isoformat(),
                 "end_time": (datetime.utcnow() + timedelta(minutes=30)).isoformat()
             }
             
             response = self.make_request("POST", "/workout-sessions/", 
-                                       token=self.tokens["alex"], json=home_session_data)
+                                       token=self.tokens["alex"], 
+                                       params=home_params,
+                                       json=home_exercises)
             
             if response.status_code == 200:
                 session = response.json()
