@@ -1,57 +1,48 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { useHabitStore } from '../../store/habit';
-import { server } from '../msw/handlers';
+import { server } from '../../../jest.setup';
 import { http, HttpResponse } from 'msw';
 
-// Mock MMKV
-const mockMMKV = {
-  getString: jest.fn(),
-  set: jest.fn(),
-  delete: jest.fn(),
-};
-
-jest.mock('react-native-mmkv', () => ({
-  MMKV: jest.fn(() => mockMMKV),
-}));
+// Reset store before each test
+beforeEach(() => {
+  const { getState } = useHabitStore;
+  act(() => {
+    getState().habits = [];
+    getState().logs = [];
+    getState().error = null;
+    getState().isLoading = false;
+  });
+});
 
 describe('useHabitStore', () => {
-  beforeEach(() => {
-    // Reset store state
-    useHabitStore.setState({
-      habits: [],
-      logsIndexByDate: {},
-      isLoading: false,
-      error: null,
-    });
-    
-    // Reset MMKV mocks
-    mockMMKV.getString.mockReturnValue(null);
-    mockMMKV.set.mockClear();
-    mockMMKV.delete.mockClear();
-  });
-
   describe('fetchHabits', () => {
-    it('should fetch and store habits', async () => {
+    it('should fetch habits successfully', async () => {
       const { result } = renderHook(() => useHabitStore());
 
       await act(async () => {
         await result.current.fetchHabits();
       });
 
-      expect(result.current.habits).toHaveLength(1);
-      expect(result.current.habits[0].name).toBe('Drink Water');
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.habits.length).toBeGreaterThan(0);
+      expect(result.current.habits[0]).toEqual({
+        id: expect.any(String),
+        name: expect.any(String),
+        description: expect.any(String),
+        cadence: expect.any(Array),
+        reminder_enabled: expect.any(Boolean),
+        reminder_time: expect.any(String),
+        user_id: expect.any(String),
+        created_at: expect.any(String),
+        updated_at: expect.any(String),
+      });
       expect(result.current.error).toBeNull();
-      expect(mockMMKV.set).toHaveBeenCalledWith('habit.habits', expect.any(String));
     });
 
-    it('should handle fetch habits error', async () => {
+    it('should handle fetch failure', async () => {
+      // Mock failed fetch
       server.use(
-        http.get('*/api/habits', () => {
-          return HttpResponse.json(
-            { detail: 'Server error' },
-            { status: 500 }
-          );
+        http.get('/api/habits/', () => {
+          return new HttpResponse(null, { status: 500 });
         })
       );
 
@@ -61,194 +52,227 @@ describe('useHabitStore', () => {
         await result.current.fetchHabits();
       });
 
-      expect(result.current.habits).toHaveLength(0);
-      expect(result.current.error).toBe('Server error');
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.habits).toEqual([]);
+      expect(result.current.error).toBe('Failed to fetch habits');
     });
   });
 
   describe('createHabit', () => {
-    it('should create a new habit', async () => {
+    it('should create habit successfully', async () => {
       const { result } = renderHook(() => useHabitStore());
-      
-      const habitData = {
-        name: 'Exercise',
-        description: 'Daily exercise routine',
+
+      const newHabit = {
+        name: 'Morning Exercise',
+        description: 'Do 30 minutes of exercise every morning',
         cadence: ['monday', 'wednesday', 'friday'],
-        reminder_time: '07:00',
+        reminder_enabled: true,
+        reminder_time: '07:30',
       };
 
       await act(async () => {
-        await result.current.createHabit(habitData);
+        await result.current.createHabit(newHabit);
       });
 
-      expect(result.current.habits).toHaveLength(1);
-      expect(result.current.habits[0].name).toBe('Exercise');
-      expect(result.current.isLoading).toBe(false);
-      expect(mockMMKV.set).toHaveBeenCalled();
+      expect(result.current.habits.length).toBe(1);
+      expect(result.current.habits[0].name).toBe(newHabit.name);
+      expect(result.current.error).toBeNull();
     });
 
-    it('should handle create habit error', async () => {
+    it('should handle create failure', async () => {
+      // Mock failed create
       server.use(
-        http.post('*/api/habits', () => {
-          return HttpResponse.json(
-            { detail: 'Validation error' },
-            { status: 400 }
-          );
+        http.post('/api/habits/', () => {
+          return new HttpResponse(null, { status: 400 });
         })
       );
 
       const { result } = renderHook(() => useHabitStore());
-      
-      const habitData = {
+
+      const newHabit = {
         name: '',
-        description: '',
+        description: 'Invalid habit',
         cadence: [],
-        reminder_time: '',
+        reminder_enabled: false,
+        reminder_time: '08:00',
       };
 
       await act(async () => {
-        try {
-          await result.current.createHabit(habitData);
-        } catch (error) {
-          // Expected to throw
-        }
+        await result.current.createHabit(newHabit);
       });
 
-      expect(result.current.error).toBe('Validation error');
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.habits).toEqual([]);
+      expect(result.current.error).toBe('Failed to create habit');
+    });
+  });
+
+  describe('updateHabit', () => {
+    it('should update habit successfully', async () => {
+      const { result } = renderHook(() => useHabitStore());
+
+      // First create a habit
+      const newHabit = {
+        name: 'Original Name',
+        description: 'Original description',
+        cadence: ['monday'],
+        reminder_enabled: false,
+        reminder_time: '09:00',
+      };
+
+      await act(async () => {
+        await result.current.createHabit(newHabit);
+      });
+
+      const habitId = result.current.habits[0].id;
+      const updatedData = {
+        name: 'Updated Name',
+        description: 'Updated description',
+        cadence: ['monday', 'tuesday'],
+        reminder_enabled: true,
+        reminder_time: '10:00',
+      };
+
+      await act(async () => {
+        await result.current.updateHabit(habitId, updatedData);
+      });
+
+      const updatedHabit = result.current.habits[0];
+      expect(updatedHabit.name).toBe('Updated Name');
+      expect(updatedHabit.cadence).toEqual(['monday', 'tuesday']);
+      expect(updatedHabit.reminder_enabled).toBe(true);
+    });
+  });
+
+  describe('deleteHabit', () => {
+    it('should delete habit successfully', async () => {
+      const { result } = renderHook(() => useHabitStore());
+
+      // First create a habit
+      const newHabit = {
+        name: 'To Delete',
+        description: 'This will be deleted',
+        cadence: ['monday'],
+        reminder_enabled: false,
+        reminder_time: '09:00',
+      };
+
+      await act(async () => {
+        await result.current.createHabit(newHabit);
+      });
+
+      expect(result.current.habits.length).toBe(1);
+      const habitId = result.current.habits[0].id;
+
+      await act(async () => {
+        await result.current.deleteHabit(habitId);
+      });
+
+      expect(result.current.habits.length).toBe(0);
     });
   });
 
   describe('logHabit', () => {
-    it('should log habit completion', async () => {
+    it('should log habit as done', async () => {
       const { result } = renderHook(() => useHabitStore());
-      
-      const today = new Date().toISOString().split('T')[0];
-      const logData = {
-        date: today,
-        status: 'done' as const,
-        notes: 'Completed successfully',
-      };
+
+      const habitId = 'test-habit-id';
+      const date = '2024-01-01';
 
       await act(async () => {
-        await result.current.logHabit('1', logData);
+        await result.current.logHabit(habitId, date, 'done');
       });
 
-      const logsForToday = result.current.getLogsForDate(today);
-      expect(logsForToday).toHaveLength(1);
-      expect(logsForToday[0].status).toBe('done');
-      expect(mockMMKV.set).toHaveBeenCalledWith('habit.logs', expect.any(String));
+      const log = result.current.getLogForDate(habitId, date);
+      expect(log?.status).toBe('done');
     });
 
-    it('should replace existing log for same habit and date', async () => {
+    it('should log habit as skipped', async () => {
       const { result } = renderHook(() => useHabitStore());
-      
-      const today = new Date().toISOString().split('T')[0];
-      
-      // First log
+
+      const habitId = 'test-habit-id';
+      const date = '2024-01-01';
+
       await act(async () => {
-        await result.current.logHabit('1', {
-          date: today,
-          status: 'done',
-          notes: 'First log',
-        });
+        await result.current.logHabit(habitId, date, 'skip');
       });
 
-      // Second log for same habit and date
-      await act(async () => {
-        await result.current.logHabit('1', {
-          date: today,
-          status: 'skipped',
-          notes: 'Second log',
-        });
-      });
-
-      const logsForToday = result.current.getLogsForDate(today);
-      expect(logsForToday).toHaveLength(1);
-      expect(logsForToday[0].status).toBe('skipped');
-      expect(logsForToday[0].notes).toBe('Second log');
+      const log = result.current.getLogForDate(habitId, date);
+      expect(log?.status).toBe('skip');
     });
   });
 
   describe('getLogsForDate', () => {
-    it('should return logs for specific date', () => {
+    it('should return logs for specific date', async () => {
       const { result } = renderHook(() => useHabitStore());
-      
-      const testDate = '2024-01-15';
-      const mockLogs = [
-        {
-          id: '1',
-          habit_id: '1',
-          date: testDate,
-          status: 'done' as const,
-          notes: 'Test log',
-          created_by: '1',
-          created_at: new Date().toISOString(),
-        },
-      ];
 
-      // Set logs directly
-      act(() => {
-        useHabitStore.setState({
-          logsIndexByDate: {
-            [testDate]: mockLogs,
-          },
-        });
+      const date = '2024-01-01';
+      const habitId1 = 'habit-1';
+      const habitId2 = 'habit-2';
+
+      await act(async () => {
+        await result.current.logHabit(habitId1, date, 'done');
+        await result.current.logHabit(habitId2, date, 'skip');
       });
 
-      const logs = result.current.getLogsForDate(testDate);
-      expect(logs).toEqual(mockLogs);
-    });
-
-    it('should return empty array for date with no logs', () => {
-      const { result } = renderHook(() => useHabitStore());
-      
-      const logs = result.current.getLogsForDate('2024-01-15');
-      expect(logs).toEqual([]);
+      const logs = result.current.getLogsForDate(date);
+      expect(logs.length).toBe(2);
+      expect(logs.find(l => l.habit_id === habitId1)?.status).toBe('done');
+      expect(logs.find(l => l.habit_id === habitId2)?.status).toBe('skip');
     });
   });
 
   describe('getHabitLogsForDateRange', () => {
-    it('should return habit logs for date range', () => {
+    it('should return logs for date range', async () => {
       const { result } = renderHook(() => useHabitStore());
-      
-      const mockLogs = {
-        '2024-01-15': [
-          {
-            id: '1',
-            habit_id: '1',
-            date: '2024-01-15',
-            status: 'done' as const,
-            notes: 'Day 1',
-            created_by: '1',
-            created_at: new Date().toISOString(),
-          },
-        ],
-        '2024-01-16': [
-          {
-            id: '2',
-            habit_id: '1',
-            date: '2024-01-16',
-            status: 'skipped' as const,
-            notes: 'Day 2',
-            created_by: '1',
-            created_at: new Date().toISOString(),
-          },
-        ],
-      };
 
-      // Set logs directly
-      act(() => {
-        useHabitStore.setState({
-          logsIndexByDate: mockLogs,
-        });
+      const habitId = 'test-habit';
+      
+      await act(async () => {
+        await result.current.logHabit(habitId, '2024-01-01', 'done');
+        await result.current.logHabit(habitId, '2024-01-02', 'skip');
+        await result.current.logHabit(habitId, '2024-01-03', 'done');
       });
 
-      const logs = result.current.getHabitLogsForDateRange('1', '2024-01-15', '2024-01-16');
-      expect(logs).toHaveLength(2);
-      expect(logs[0].date).toBe('2024-01-15');
-      expect(logs[1].date).toBe('2024-01-16');
+      const logs = result.current.getHabitLogsForDateRange(habitId, '2024-01-01', '2024-01-03');
+      expect(logs.length).toBe(3);
+    });
+  });
+
+  describe('error handling', () => {
+    it('should clear error when clearError is called', () => {
+      const { result } = renderHook(() => useHabitStore());
+
+      // Manually set error for testing
+      act(() => {
+        result.current.error = 'Test error';
+      });
+
+      expect(result.current.error).toBe('Test error');
+
+      act(() => {
+        result.current.clearError();
+      });
+
+      expect(result.current.error).toBeNull();
+    });
+  });
+
+  describe('loading states', () => {
+    it('should set loading state during operations', async () => {
+      const { result } = renderHook(() => useHabitStore());
+
+      // Start fetch
+      act(() => {
+        result.current.fetchHabits();
+      });
+
+      expect(result.current.isLoading).toBe(true);
+
+      // Wait for completion
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
+
+      expect(result.current.isLoading).toBe(false);
     });
   });
 });

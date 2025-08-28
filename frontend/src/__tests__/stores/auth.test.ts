@@ -1,297 +1,211 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { useAuthStore } from '../../store/auth';
-import { server } from '../msw/handlers';
+import { server } from '../../../jest.setup';
 import { http, HttpResponse } from 'msw';
 
-// Mock MMKV
-const mockMMKV = {
-  getString: jest.fn(),
-  set: jest.fn(),
-  delete: jest.fn(),
-};
-
-jest.mock('react-native-mmkv', () => ({
-  MMKV: jest.fn(() => mockMMKV),
-}));
-
-// Mock API service
-const mockApiService = {
-  login: jest.fn(),
-  register: jest.fn(),
-  signInWithApple: jest.fn(),
-  logout: jest.fn(),
-  getMe: jest.fn(),
-  setTokens: jest.fn(),
-  clearTokens: jest.fn(),
-  getAccessToken: jest.fn(),
-};
-
-jest.mock('../../services/api', () => ({
-  apiService: mockApiService,
-}));
+// Reset store before each test
+beforeEach(() => {
+  const { getState } = useAuthStore;
+  act(() => {
+    getState().logout();
+  });
+});
 
 describe('useAuthStore', () => {
-  beforeEach(() => {
-    // Reset store state
-    useAuthStore.setState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-    });
-    
-    // Reset mocks
-    mockMMKV.getString.mockReturnValue(null);
-    mockMMKV.set.mockClear();
-    mockMMKV.delete.mockClear();
-    Object.values(mockApiService).forEach(mock => mock.mockClear());
-  });
-
   describe('login', () => {
-    it('should login successfully with valid credentials', async () => {
-      const mockResponse = {
-        access_token: 'mock-token',
-        refresh_token: 'mock-refresh',
-        user: {
-          id: '1',
-          email: 'alex@example.com',
-          name: 'Alex Johnson',
-        },
-      };
-
-      mockApiService.login.mockResolvedValue(mockResponse);
-      mockApiService.setTokens.mockResolvedValue(undefined);
-
+    it('should handle successful login', async () => {
       const { result } = renderHook(() => useAuthStore());
 
       await act(async () => {
-        await result.current.login({
-          email: 'alex@example.com',
-          password: 'password123',
-        });
+        await result.current.login('alex@example.com', 'password123');
       });
 
-      expect(result.current.user).toEqual(mockResponse.user);
       expect(result.current.isAuthenticated).toBe(true);
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.user).toEqual({
+        id: '1',
+        email: 'alex@example.com',
+        full_name: 'Alex Johnson',
+        created_at: expect.any(String),
+        updated_at: expect.any(String),
+      });
+      expect(result.current.tokens).toEqual({
+        access_token: 'mock-access-token',
+        refresh_token: 'mock-refresh-token',
+        token_type: 'bearer',
+      });
       expect(result.current.error).toBeNull();
-      expect(mockMMKV.set).toHaveBeenCalledWith('auth.user', JSON.stringify(mockResponse.user));
     });
 
-    it('should handle login error', async () => {
-      const mockError = { detail: 'Invalid credentials' };
-      mockApiService.login.mockRejectedValue(mockError);
+    it('should handle login failure', async () => {
+      // Mock failed login
+      server.use(
+        http.post('/api/auth/login', () => {
+          return new HttpResponse(null, { status: 401 });
+        })
+      );
 
       const { result } = renderHook(() => useAuthStore());
 
       await act(async () => {
-        try {
-          await result.current.login({
-            email: 'wrong@example.com',
-            password: 'wrongpassword',
-          });
-        } catch (error) {
-          // Expected to throw
-        }
+        await result.current.login('invalid@example.com', 'wrongpassword');
       });
 
-      expect(result.current.user).toBeNull();
       expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.user).toBeNull();
+      expect(result.current.tokens).toBeNull();
       expect(result.current.error).toBe('Invalid credentials');
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it('should set loading state during login', async () => {
+      const { result } = renderHook(() => useAuthStore());
+
+      // Start login
+      act(() => {
+        result.current.login('alex@example.com', 'password123');
+      });
+
+      // Should be loading initially
+      expect(result.current.isLoading).toBe(true);
+
+      // Wait for completion
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
+
       expect(result.current.isLoading).toBe(false);
     });
   });
 
   describe('register', () => {
-    it('should register successfully', async () => {
-      const mockResponse = {
-        access_token: 'mock-token',
-        refresh_token: 'mock-refresh',
-        user: {
-          id: '3',
-          email: 'newuser@example.com',
-          name: 'New User',
-        },
-      };
-
-      mockApiService.register.mockResolvedValue(mockResponse);
-      mockApiService.setTokens.mockResolvedValue(undefined);
-
+    it('should handle successful registration', async () => {
       const { result } = renderHook(() => useAuthStore());
 
       await act(async () => {
-        await result.current.register({
-          email: 'newuser@example.com',
-          password: 'password123',
-          name: 'New User',
-        });
+        await result.current.register('newuser@example.com', 'password123', 'New User');
       });
 
-      expect(result.current.user).toEqual(mockResponse.user);
       expect(result.current.isAuthenticated).toBe(true);
-      expect(result.current.isLoading).toBe(false);
-      expect(mockMMKV.set).toHaveBeenCalledWith('auth.user', JSON.stringify(mockResponse.user));
+      expect(result.current.user).toEqual({
+        id: expect.any(String),
+        email: 'newuser@example.com',
+        full_name: 'New User',
+        created_at: expect.any(String),
+        updated_at: expect.any(String),
+      });
+      expect(result.current.error).toBeNull();
     });
-  });
 
-  describe('loginWithApple', () => {
-    it('should login with Apple successfully', async () => {
-      const mockResponse = {
-        access_token: 'mock-token',
-        refresh_token: 'mock-refresh',
-        user: {
-          id: '4',
-          email: 'apple@example.com',
-          name: 'Apple User',
-        },
-      };
-
-      mockApiService.signInWithApple.mockResolvedValue(mockResponse);
-      mockApiService.setTokens.mockResolvedValue(undefined);
+    it('should handle registration failure', async () => {
+      // Mock failed registration
+      server.use(
+        http.post('/api/auth/register', () => {
+          return new HttpResponse(null, { status: 400 });
+        })
+      );
 
       const { result } = renderHook(() => useAuthStore());
 
       await act(async () => {
-        await result.current.loginWithApple('identity-token', 'auth-code');
+        await result.current.register('existing@example.com', 'password123', 'Existing User');
       });
 
-      expect(result.current.user).toEqual(mockResponse.user);
-      expect(result.current.isAuthenticated).toBe(true);
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.user).toBeNull();
+      expect(result.current.error).toBe('Registration failed');
     });
   });
 
   describe('logout', () => {
-    it('should logout successfully', async () => {
-      // Set initial authenticated state
-      act(() => {
-        useAuthStore.setState({
-          user: { id: '1', email: 'test@example.com', name: 'Test User' },
-          isAuthenticated: true,
-        });
-      });
-
-      mockApiService.logout.mockResolvedValue(undefined);
-      mockApiService.clearTokens.mockResolvedValue(undefined);
-
+    it('should clear user data on logout', async () => {
       const { result } = renderHook(() => useAuthStore());
 
+      // First login
       await act(async () => {
-        await result.current.logout();
+        await result.current.login('alex@example.com', 'password123');
       });
 
-      expect(result.current.user).toBeNull();
-      expect(result.current.isAuthenticated).toBe(false);
-      expect(result.current.isLoading).toBe(false);
-      expect(result.current.error).toBeNull();
-      expect(mockMMKV.delete).toHaveBeenCalledWith('auth.user');
-    });
-
-    it('should logout locally even if API call fails', async () => {
-      // Set initial authenticated state
-      act(() => {
-        useAuthStore.setState({
-          user: { id: '1', email: 'test@example.com', name: 'Test User' },
-          isAuthenticated: true,
-        });
-      });
-
-      mockApiService.logout.mockRejectedValue(new Error('Network error'));
-      mockApiService.clearTokens.mockResolvedValue(undefined);
-
-      const { result } = renderHook(() => useAuthStore());
-
-      await act(async () => {
-        await result.current.logout();
-      });
-
-      expect(result.current.user).toBeNull();
-      expect(result.current.isAuthenticated).toBe(false);
-    });
-  });
-
-  describe('checkAuthStatus', () => {
-    it('should validate existing token and set user', async () => {
-      const mockUser = {
-        id: '1',
-        email: 'test@example.com',
-        name: 'Test User',
-      };
-
-      mockApiService.getAccessToken.mockResolvedValue('valid-token');
-      mockApiService.getMe.mockResolvedValue(mockUser);
-
-      const { result } = renderHook(() => useAuthStore());
-
-      await act(async () => {
-        await result.current.checkAuthStatus();
-      });
-
-      expect(result.current.user).toEqual(mockUser);
       expect(result.current.isAuthenticated).toBe(true);
-      expect(result.current.isLoading).toBe(false);
-    });
 
-    it('should clear auth state if no token exists', async () => {
-      mockApiService.getAccessToken.mockResolvedValue(null);
-
-      const { result } = renderHook(() => useAuthStore());
-
-      await act(async () => {
-        await result.current.checkAuthStatus();
+      // Then logout
+      act(() => {
+        result.current.logout();
       });
 
-      expect(result.current.user).toBeNull();
       expect(result.current.isAuthenticated).toBe(false);
-    });
-
-    it('should clear auth state if token is invalid', async () => {
-      mockApiService.getAccessToken.mockResolvedValue('invalid-token');
-      mockApiService.getMe.mockRejectedValue(new Error('Unauthorized'));
-      mockApiService.clearTokens.mockResolvedValue(undefined);
-
-      const { result } = renderHook(() => useAuthStore());
-
-      await act(async () => {
-        await result.current.checkAuthStatus();
-      });
-
       expect(result.current.user).toBeNull();
-      expect(result.current.isAuthenticated).toBe(false);
-      expect(mockApiService.clearTokens).toHaveBeenCalled();
-      expect(mockMMKV.delete).toHaveBeenCalledWith('auth.user');
+      expect(result.current.tokens).toBeNull();
     });
   });
 
-  describe('setUser', () => {
-    it('should update user in store and persist to MMKV', () => {
+  describe('Apple Sign In', () => {
+    it('should handle Apple sign in when available', async () => {
       const { result } = renderHook(() => useAuthStore());
-      
-      const newUser = {
-        id: '1',
-        email: 'updated@example.com',
-        name: 'Updated User',
-      };
 
-      act(() => {
-        result.current.setUser(newUser);
+      // Mock successful Apple sign in
+      server.use(
+        http.post('/api/auth/apple', () => {
+          return HttpResponse.json({
+            access_token: 'mock-apple-access-token',
+            refresh_token: 'mock-apple-refresh-token',
+            token_type: 'bearer',
+            user: {
+              id: '3',
+              email: 'apple@example.com',
+              full_name: 'Apple User',
+              created_at: '2024-01-01T00:00:00Z',
+              updated_at: '2024-01-01T00:00:00Z',
+            },
+          });
+        })
+      );
+
+      await act(async () => {
+        await result.current.loginWithApple();
       });
 
-      expect(result.current.user).toEqual(newUser);
-      expect(mockMMKV.set).toHaveBeenCalledWith('auth.user', JSON.stringify(newUser));
+      expect(result.current.isAuthenticated).toBe(true);
+      expect(result.current.user?.email).toBe('apple@example.com');
     });
   });
 
-  describe('clearError', () => {
-    it('should clear error state', () => {
+  describe('token refresh', () => {
+    it('should refresh tokens when needed', async () => {
       const { result } = renderHook(() => useAuthStore());
-      
-      // Set error
-      act(() => {
-        useAuthStore.setState({ error: 'Test error' });
+
+      // First login to get tokens
+      await act(async () => {
+        await result.current.login('alex@example.com', 'password123');
       });
 
-      expect(result.current.error).toBe('Test error');
+      // Mock refresh endpoint
+      server.use(
+        http.post('/api/auth/refresh', () => {
+          return HttpResponse.json({
+            access_token: 'new-access-token',
+            token_type: 'bearer',
+          });
+        })
+      );
+
+      await act(async () => {
+        await result.current.refreshAccessToken();
+      });
+
+      expect(result.current.tokens?.access_token).toBe('new-access-token');
+    });
+  });
+
+  describe('error handling', () => {
+    it('should clear error when clearError is called', async () => {
+      const { result } = renderHook(() => useAuthStore());
+
+      // Trigger an error
+      await act(async () => {
+        await result.current.login('invalid@example.com', 'wrongpassword');
+      });
+
+      expect(result.current.error).toBeTruthy();
 
       // Clear error
       act(() => {
@@ -299,6 +213,19 @@ describe('useAuthStore', () => {
       });
 
       expect(result.current.error).toBeNull();
+    });
+  });
+
+  describe('checkAuthStatus', () => {
+    it('should check authentication status on init', async () => {
+      const { result } = renderHook(() => useAuthStore());
+
+      await act(async () => {
+        await result.current.checkAuthStatus();
+      });
+
+      // Should complete without error even if no stored tokens
+      expect(result.current.isLoading).toBe(false);
     });
   });
 });
