@@ -89,20 +89,20 @@ describe('AppNavigator', () => {
       isAuthenticated: false,
       isLoading: true,
       user: null,
-      tokens: null,
       error: null,
       login: jest.fn(),
       register: jest.fn(),
       logout: jest.fn(),
       loginWithApple: jest.fn(),
-      refreshAccessToken: jest.fn(),
       clearError: jest.fn(),
       checkAuthStatus: jest.fn(),
+      setUser: jest.fn(),
     });
 
-    const { container } = render(<AppNavigator />);
+    const { queryByTestId } = render(<AppNavigator />);
 
     // Should render nothing (null) when loading
-    expect(container.children.length).toBe(0);
+    expect(queryByTestId('auth-navigator')).toBeNull();
+    expect(queryByTestId('main-tab-navigator')).toBeNull();
   });
 });
