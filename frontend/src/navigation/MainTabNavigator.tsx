@@ -2,9 +2,9 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
-// Placeholder screens - will be implemented in later phases
+// Main screens
 import DashboardScreen from '../screens/main/DashboardScreen';
-import WorkoutsScreen from '../screens/main/WorkoutsScreen';
+import WorkoutNavigator from './WorkoutNavigator';
 import HabitsScreen from '../screens/main/HabitsScreen';
 import ProgressScreen from '../screens/main/ProgressScreen';
 import CoupleScreen from '../screens/main/CoupleScreen';
@@ -59,7 +59,7 @@ export default function MainTabNavigator() {
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Workouts" component={WorkoutsScreen} />
+      <Tab.Screen name="Workouts" component={WorkoutNavigator} />
       <Tab.Screen name="Habits" component={HabitsScreen} />
       <Tab.Screen name="Progress" component={ProgressScreen} />
       <Tab.Screen name="Couple" component={CoupleScreen} />
