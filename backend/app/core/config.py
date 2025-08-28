@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     
     # CORS
-    CORS_ORIGINS: List[str] = ["*"]
+    CORS_ORIGINS: str = "*"
     
     # Rate Limiting
     RATE_LIMIT_REQUESTS: int = 100
