@@ -42,6 +42,8 @@ class FrontendIntegrationTester:
         try:
             response = self.session.request(method, url, **kwargs)
             self.log(f"{method} {endpoint} -> {response.status_code}")
+            if response.status_code >= 400:
+                self.log(f"Response body: {response.text}")
             return response
         except requests.exceptions.RequestException as e:
             self.log(f"Request failed: {e}", "ERROR")
