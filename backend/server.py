@@ -1,75 +1,86 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
-import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List
-import uuid
-from datetime import datetime
 
-
+# Load environment variables
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+from app.core.config import settings
+from app.core.database import engine, Base
 
-# Create the main app without a prefix
-app = FastAPI()
+# Import all models to ensure they're registered with SQLAlchemy
+from app.models import *
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
+# Create FastAPI application
+app = FastAPI(
+    title=settings.APP_NAME,
+    debug=settings.DEBUG,
+)
 
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
-
-# Include the router in the main app
-app.include_router(api_router)
-
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Basic health check endpoint
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy", "app": settings.APP_NAME}
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+@app.get("/api/")
+async def root():
+    return {"message": "CouplesWorkout API", "version": "1.0.0"}
+
+# Placeholder for auth endpoints
+@app.post("/api/auth/register")
+async def register():
+    return {"message": "Registration endpoint - to be implemented"}
+
+@app.post("/api/auth/login")
+async def login():
+    return {"message": "Login endpoint - to be implemented"}
+
+@app.get("/api/me")
+async def get_current_user():
+    return {"message": "Get current user - to be implemented"}
+
+# Placeholder for workout endpoints
+@app.get("/api/workout-templates")
+async def get_workout_templates():
+    return {"message": "Get workout templates - to be implemented"}
+
+@app.post("/api/workout-sessions")
+async def create_workout_session():
+    return {"message": "Create workout session - to be implemented"}
+
+# Placeholder for habit endpoints
+@app.get("/api/habits")
+async def get_habits():
+    return {"message": "Get habits - to be implemented"}
+
+@app.post("/api/habits")
+async def create_habit():
+    return {"message": "Create habit - to be implemented"}
+
+# Placeholder for couple endpoints
+@app.post("/api/couples")
+async def create_couple():
+    return {"message": "Create couple - to be implemented"}
+
+@app.get("/api/couples/{couple_id}/members")
+async def get_couple_members():
+    return {"message": "Get couple members - to be implemented"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("server:app", host="0.0.0.0", port=8001, reload=True)
