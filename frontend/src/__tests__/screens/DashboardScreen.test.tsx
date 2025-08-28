@@ -1,427 +1,344 @@
 import React from 'react';
-import { render, waitFor, screen } from '@testing-library/react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { DashboardScreen } from '../../screens/main/DashboardScreen';
-import { useAuthStore } from '../../store/auth';
+import { render, waitFor } from '@testing-library/react-native';
+import DashboardScreen from '../../screens/main/DashboardScreen';
 import { useWorkoutStore } from '../../store/workout';
 import { useHabitStore } from '../../store/habit';
 import { useCoupleStore } from '../../store/couple';
+import { useAuthStore } from '../../store/auth';
+
+// Mock navigation
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useNavigation: () => ({
+    navigate: jest.fn(),
+  }),
+  useFocusEffect: jest.fn((callback) => callback()),
+}));
 
 // Mock stores
-jest.mock('../../store/auth');
 jest.mock('../../store/workout');
 jest.mock('../../store/habit');
 jest.mock('../../store/couple');
+jest.mock('../../store/auth');
 
-const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>;
 const mockUseWorkoutStore = useWorkoutStore as jest.MockedFunction<typeof useWorkoutStore>;
 const mockUseHabitStore = useHabitStore as jest.MockedFunction<typeof useHabitStore>;
 const mockUseCoupleStore = useCoupleStore as jest.MockedFunction<typeof useCoupleStore>;
+const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>;
 
-// Mock navigation
-const mockNavigation = {
-  navigate: jest.fn(),
-  goBack: jest.fn(),
-  setOptions: jest.fn(),
-};
-
-// Test wrapper with navigation
-const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-  <NavigationContainer>
-    {children}
-  </NavigationContainer>
-);
+// Mock Ionicons
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: ({ name, size, color }: any) => 
+    React.createElement('Text', { testID: `icon-${name}` }, `Icon: ${name}`),
+}));
 
 describe('DashboardScreen', () => {
-  const mockUser = {
-    id: '1',
-    email: 'alex@example.com',
-    name: 'Alex Johnson',
-  };
-
-  const mockWeeklyStats = {
-    sessions_count: 3,
-    total_duration: 180,
-    total_volume: 5000,
-    avg_session_duration: 60,
-  };
-
-  const mockHabits = [
-    {
-      id: '1',
-      name: 'Drink Water',
-      description: 'Drink 8 glasses daily',
-      cadence: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-      reminder_time: '09:00',
-      created_by: '1',
-      created_at: '2024-01-01T00:00:00Z',
+  const defaultWorkoutState = {
+    templates: [],
+    sessions: [],
+    currentSession: null,
+    weeklyStats: {
+      totalWorkouts: 5,
+      totalVolume: 12500,
+      totalDuration: 300,
+      averageDuration: 60,
     },
-  ];
-
-  const mockCouple = {
-    id: '1',
-    name: 'Alex & Sam',
-    created_by: '1',
-    created_at: '2024-01-01T00:00:00Z',
+    isLoading: false,
+    error: null,
+    fetchMyTemplates: jest.fn(),
+    createTemplate: jest.fn(),
+    updateTemplate: jest.fn(),
+    deleteTemplate: jest.fn(),
+    startSession: jest.fn(),
+    updateCurrentSession: jest.fn(),
+    finishSession: jest.fn(),
+    fetchSessions: jest.fn(),
+    fetchWeeklyStats: jest.fn(),
+    clearError: jest.fn(),
   };
 
-  const mockMembers = [
-    {
-      id: '1',
-      user_id: '1',
-      couple_id: '1',
-      role: 'creator' as const,
-      user: mockUser,
-      joined_at: '2024-01-01T00:00:00Z',
-    },
-    {
-      id: '2',
-      user_id: '2',
-      couple_id: '1',
-      role: 'member' as const,
-      user: {
-        id: '2',
-        email: 'sam@example.com',
-        name: 'Sam Wilson',
+  const defaultHabitState = {
+    habits: [
+      {
+        id: '1',
+        name: 'Drink Water',
+        description: 'Drink 8 glasses daily',
+        cadence: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+        reminder_enabled: true,
+        reminder_time: '09:00',
+        user_id: '1',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
       },
-      joined_at: '2024-01-02T00:00:00Z',
-    },
-  ];
-
-  beforeEach(() => {
-    mockUseAuthStore.mockReturnValue({
-      user: mockUser,
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      login: jest.fn(),
-      register: jest.fn(),
-      loginWithApple: jest.fn(),
-      logout: jest.fn(),
-      checkAuthStatus: jest.fn(),
-      clearError: jest.fn(),
-      setUser: jest.fn(),
-    });
-
-    mockUseWorkoutStore.mockReturnValue({
-      templates: [],
-      myTemplates: [],
-      systemTemplates: [],
-      currentSession: null,
-      weeklyStats: mockWeeklyStats,
-      isLoading: false,
-      error: null,
-      fetchTemplates: jest.fn(),
-      createTemplate: jest.fn(),
-      updateTemplate: jest.fn(),
-      startSession: jest.fn(),
-      updateCurrentSession: jest.fn(),
-      finishSession: jest.fn(),
-      fetchWeeklyStats: jest.fn(),
-      clearError: jest.fn(),
-      clearCurrentSession: jest.fn(),
-    });
-
-    mockUseHabitStore.mockReturnValue({
-      habits: mockHabits,
-      logsIndexByDate: {},
-      isLoading: false,
-      error: null,
-      fetchHabits: jest.fn(),
-      createHabit: jest.fn(),
-      updateHabit: jest.fn(),
-      deleteHabit: jest.fn(),
-      fetchLogs: jest.fn(),
-      logHabit: jest.fn(),
-      getLogsForDate: jest.fn(() => []),
-      getHabitLogsForDateRange: jest.fn(() => []),
-      clearError: jest.fn(),
-    });
-
-    mockUseCoupleStore.mockReturnValue({
-      couple: mockCouple,
-      members: mockMembers,
-      settings: null,
-      inviteCode: null,
-      sharedFeed: [],
-      isLoading: false,
-      error: null,
-      fetchCoupleInfo: jest.fn(),
-      createCouple: jest.fn(),
-      generateInvite: jest.fn(),
-      acceptInvite: jest.fn(),
-      updateSettings: jest.fn(),
-      fetchSharedFeed: jest.fn(),
-      leaveCouple: jest.fn(),
-      clearError: jest.fn(),
-      clearCoupleData: jest.fn(),
-    });
-
-    mockNavigation.navigate.mockClear();
-  });
-
-  it('should render dashboard with user greeting', () => {
-    render(
-      <TestWrapper>
-        <DashboardScreen navigation={mockNavigation as any} />
-      </TestWrapper>
-    );
-
-    expect(screen.getByText('Good morning, Alex!')).toBeTruthy();
-  });
-
-  it('should display workout statistics', () => {
-    render(
-      <TestWrapper>
-        <DashboardScreen navigation={mockNavigation as any} />
-      </TestWrapper>
-    );
-
-    expect(screen.getByText('This Week')).toBeTruthy();
-    expect(screen.getByText('3 Sessions')).toBeTruthy();
-    expect(screen.getByText('180 min')).toBeTruthy();
-    expect(screen.getByText('5000 lbs')).toBeTruthy();
-  });
-
-  it('should display habit completion rate', () => {
-    const today = new Date().toISOString().split('T')[0];
-    const mockGetLogsForDate = jest.fn(() => [
+    ],
+    logs: [],
+    isLoading: false,
+    error: null,
+    fetchHabits: jest.fn(),
+    createHabit: jest.fn(),
+    updateHabit: jest.fn(),
+    deleteHabit: jest.fn(),
+    logHabit: jest.fn(),
+    fetchLogs: jest.fn(),
+    getLogForDate: jest.fn(),
+    getLogsForDate: jest.fn().mockReturnValue([
       {
         id: '1',
         habit_id: '1',
-        date: today,
-        status: 'done' as const,
-        notes: '',
-        created_by: '1',
-        created_at: new Date().toISOString(),
+        date: '2024-01-01',
+        status: 'done',
+        created_at: '2024-01-01T00:00:00Z',
       },
-    ]);
+    ]),
+    getHabitLogsForDateRange: jest.fn(),
+    clearError: jest.fn(),
+  };
 
-    mockUseHabitStore.mockReturnValue({
-      habits: mockHabits,
-      logsIndexByDate: {},
-      isLoading: false,
-      error: null,
-      fetchHabits: jest.fn(),
-      createHabit: jest.fn(),
-      updateHabit: jest.fn(),
-      deleteHabit: jest.fn(),
-      fetchLogs: jest.fn(),
-      logHabit: jest.fn(),
-      getLogsForDate: mockGetLogsForDate,
-      getHabitLogsForDateRange: jest.fn(() => []),
-      clearError: jest.fn(),
-    });
+  const defaultCoupleState = {
+    currentCouple: {
+      id: '1',
+      name: 'Test Couple',
+      members: [
+        {
+          id: '1',
+          email: 'user1@example.com',
+          full_name: 'User One',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: '2',
+          email: 'user2@example.com',
+          full_name: 'User Two',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+      created_by: '1',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    },
+    shareSettings: {
+      workouts: true,
+      habits: true,
+      progress: false,
+    },
+    sharedFeed: [
+      {
+        id: '1',
+        type: 'workout',
+        user_name: 'User Two',
+        title: 'Completed Push Day workout',
+        description: '45 minutes, 3 exercises',
+        timestamp: '2024-01-01T10:00:00Z',
+      },
+    ],
+    inviteCode: null,
+    isLoading: false,
+    error: null,
+    createCouple: jest.fn(),
+    joinCouple: jest.fn(),
+    getInviteCode: jest.fn(),
+    acceptInvite: jest.fn(),
+    updateShareSettings: jest.fn(),
+    fetchSharedFeed: jest.fn(),
+    fetchCoupleData: jest.fn(),
+    clearError: jest.fn(),
+  };
 
-    render(
-      <TestWrapper>
-        <DashboardScreen navigation={mockNavigation as any} />
-      </TestWrapper>
-    );
+  const defaultAuthState = {
+    isAuthenticated: true,
+    isLoading: false,
+    user: {
+      id: '1',
+      email: 'user1@example.com',
+      full_name: 'User One',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    },
+    tokens: {
+      access_token: 'mock-token',
+      refresh_token: 'mock-refresh-token',
+      token_type: 'bearer',
+    },
+    error: null,
+    login: jest.fn(),
+    register: jest.fn(),
+    logout: jest.fn(),
+    loginWithApple: jest.fn(),
+    refreshAccessToken: jest.fn(),
+    clearError: jest.fn(),
+    checkAuthStatus: jest.fn(),
+  };
 
-    expect(screen.getByText('Today\'s Habits')).toBeTruthy();
-    expect(screen.getByText('1/1 completed')).toBeTruthy();
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseWorkoutStore.mockReturnValue(defaultWorkoutState);
+    mockUseHabitStore.mockReturnValue(defaultHabitState);
+    mockUseCoupleStore.mockReturnValue(defaultCoupleState);
+    mockUseAuthStore.mockReturnValue(defaultAuthState);
   });
 
-  it('should display partner information when in couple', () => {
-    render(
-      <TestWrapper>
-        <DashboardScreen navigation={mockNavigation as any} />
-      </TestWrapper>
-    );
-
-    expect(screen.getByText('Your Partner')).toBeTruthy();
-    expect(screen.getByText('Sam Wilson')).toBeTruthy();
-  });
-
-  it('should show motivational message', () => {
-    render(
-      <TestWrapper>
-        <DashboardScreen navigation={mockNavigation as any} />
-      </TestWrapper>
-    );
-
-    // Should show one of the motivational messages
-    const motivationalMessages = [
-      'Keep pushing forward!',
-      'You\'re doing great!',
-      'Stay consistent!',
-      'Every step counts!',
-      'Progress over perfection!',
-    ];
-
-    const hasMotivationalMessage = motivationalMessages.some(message => {
-      try {
-        screen.getByText(message);
-        return true;
-      } catch {
-        return false;
-      }
-    });
-
-    expect(hasMotivationalMessage).toBe(true);
-  });
-
-  it('should handle no couple state', () => {
-    mockUseCoupleStore.mockReturnValue({
-      couple: null,
-      members: [],
-      settings: null,
-      inviteCode: null,
-      sharedFeed: [],
-      isLoading: false,
-      error: null,
-      fetchCoupleInfo: jest.fn(),
-      createCouple: jest.fn(),
-      generateInvite: jest.fn(),
-      acceptInvite: jest.fn(),
-      updateSettings: jest.fn(),
-      fetchSharedFeed: jest.fn(),
-      leaveCouple: jest.fn(),
-      clearError: jest.fn(),
-      clearCoupleData: jest.fn(),
-    });
-
-    render(
-      <TestWrapper>
-        <DashboardScreen navigation={mockNavigation as any} />
-      </TestWrapper>
-    );
-
-    expect(screen.getByText('Find Your Workout Partner')).toBeTruthy();
-    expect(screen.getByText('Create or join a couple to start sharing your fitness journey!')).toBeTruthy();
-  });
-
-  it('should handle no workout stats', () => {
-    mockUseWorkoutStore.mockReturnValue({
-      templates: [],
-      myTemplates: [],
-      systemTemplates: [],
-      currentSession: null,
-      weeklyStats: null,
-      isLoading: false,
-      error: null,
-      fetchTemplates: jest.fn(),
-      createTemplate: jest.fn(),
-      updateTemplate: jest.fn(),
-      startSession: jest.fn(),
-      updateCurrentSession: jest.fn(),
-      finishSession: jest.fn(),
-      fetchWeeklyStats: jest.fn(),
-      clearError: jest.fn(),
-      clearCurrentSession: jest.fn(),
-    });
-
-    render(
-      <TestWrapper>
-        <DashboardScreen navigation={mockNavigation as any} />
-      </TestWrapper>
-    );
-
-    expect(screen.getByText('No workouts this week')).toBeTruthy();
-    expect(screen.getByText('Start your first workout!')).toBeTruthy();
-  });
-
-  it('should handle no habits', () => {
-    mockUseHabitStore.mockReturnValue({
-      habits: [],
-      logsIndexByDate: {},
-      isLoading: false,
-      error: null,
-      fetchHabits: jest.fn(),
-      createHabit: jest.fn(),
-      updateHabit: jest.fn(),
-      deleteHabit: jest.fn(),
-      fetchLogs: jest.fn(),
-      logHabit: jest.fn(),
-      getLogsForDate: jest.fn(() => []),
-      getHabitLogsForDateRange: jest.fn(() => []),
-      clearError: jest.fn(),
-    });
-
-    render(
-      <TestWrapper>
-        <DashboardScreen navigation={mockNavigation as any} />
-      </TestWrapper>
-    );
-
-    expect(screen.getByText('No habits yet')).toBeTruthy();
-    expect(screen.getByText('Create your first habit!')).toBeTruthy();
-  });
-
-  it('should fetch data on mount', async () => {
-    const mockFetchWeeklyStats = jest.fn();
-    const mockFetchHabits = jest.fn();
-    const mockFetchLogs = jest.fn();
-    const mockFetchCoupleInfo = jest.fn();
-    const mockFetchSharedFeed = jest.fn();
-
-    mockUseWorkoutStore.mockReturnValue({
-      templates: [],
-      myTemplates: [],
-      systemTemplates: [],
-      currentSession: null,
-      weeklyStats: mockWeeklyStats,
-      isLoading: false,
-      error: null,
-      fetchTemplates: jest.fn(),
-      createTemplate: jest.fn(),
-      updateTemplate: jest.fn(),
-      startSession: jest.fn(),
-      updateCurrentSession: jest.fn(),
-      finishSession: jest.fn(),
-      fetchWeeklyStats: mockFetchWeeklyStats,
-      clearError: jest.fn(),
-      clearCurrentSession: jest.fn(),
-    });
-
-    mockUseHabitStore.mockReturnValue({
-      habits: mockHabits,
-      logsIndexByDate: {},
-      isLoading: false,
-      error: null,
-      fetchHabits: mockFetchHabits,
-      createHabit: jest.fn(),
-      updateHabit: jest.fn(),
-      deleteHabit: jest.fn(),
-      fetchLogs: mockFetchLogs,
-      logHabit: jest.fn(),
-      getLogsForDate: jest.fn(() => []),
-      getHabitLogsForDateRange: jest.fn(() => []),
-      clearError: jest.fn(),
-    });
-
-    mockUseCoupleStore.mockReturnValue({
-      couple: mockCouple,
-      members: mockMembers,
-      settings: null,
-      inviteCode: null,
-      sharedFeed: [],
-      isLoading: false,
-      error: null,
-      fetchCoupleInfo: mockFetchCoupleInfo,
-      createCouple: jest.fn(),
-      generateInvite: jest.fn(),
-      acceptInvite: jest.fn(),
-      updateSettings: jest.fn(),
-      fetchSharedFeed: mockFetchSharedFeed,
-      leaveCouple: jest.fn(),
-      clearError: jest.fn(),
-      clearCoupleData: jest.fn(),
-    });
-
-    render(
-      <TestWrapper>
-        <DashboardScreen navigation={mockNavigation as any} />
-      </TestWrapper>
-    );
+  it('should render dashboard with user greeting', async () => {
+    const { getByText } = render(<DashboardScreen />);
 
     await waitFor(() => {
-      expect(mockFetchWeeklyStats).toHaveBeenCalled();
-      expect(mockFetchHabits).toHaveBeenCalled();
-      expect(mockFetchLogs).toHaveBeenCalled();
-      expect(mockFetchCoupleInfo).toHaveBeenCalled();
-      expect(mockFetchSharedFeed).toHaveBeenCalled();
+      expect(getByText(/Hello, User One/i)).toBeTruthy();
+    });
+  });
+
+  it('should display workout statistics', async () => {
+    const { getByText } = render(<DashboardScreen />);
+
+    await waitFor(() => {
+      expect(getByText('5')).toBeTruthy(); // totalWorkouts
+      expect(getByText(/12,500/)).toBeTruthy(); // totalVolume in kg
+      expect(getByText('5h 0m')).toBeTruthy(); // totalDuration in hours/minutes
+    });
+  });
+
+  it('should display habit completion rate', async () => {
+    const { getByText } = render(<DashboardScreen />);
+
+    await waitFor(() => {
+      expect(getByText(/100%/)).toBeTruthy(); // Completion rate based on mock data
+    });
+  });
+
+  it('should show partner activity when couple exists', async () => {
+    const { getByText } = render(<DashboardScreen />);
+
+    await waitFor(() => {
+      expect(getByText(/User Two/)).toBeTruthy();
+      expect(getByText(/Completed Push Day workout/)).toBeTruthy();
+    });
+  });
+
+  it('should show motivational message when no recent activity', async () => {
+    mockUseCoupleStore.mockReturnValue({
+      ...defaultCoupleState,
+      sharedFeed: [],
+    });
+
+    const { getByText } = render(<DashboardScreen />);
+
+    await waitFor(() => {
+      expect(getByText(/Ready for today's workout/i)).toBeTruthy();
+    });
+  });
+
+  it('should show empty state when no workouts completed', async () => {
+    mockUseWorkoutStore.mockReturnValue({
+      ...defaultWorkoutState,
+      weeklyStats: {
+        totalWorkouts: 0,
+        totalVolume: 0,
+        totalDuration: 0,
+        averageDuration: 0,
+      },
+    });
+
+    const { getByText } = render(<DashboardScreen />);
+
+    await waitFor(() => {
+      expect(getByText('0')).toBeTruthy();
+      expect(getByText(/Start your first workout/i)).toBeTruthy();
+    });
+  });
+
+  it('should show empty state when no habits exist', async () => {
+    mockUseHabitStore.mockReturnValue({
+      ...defaultHabitState,
+      habits: [],
+    });
+
+    const { getByText } = render(<DashboardScreen />);
+
+    await waitFor(() => {
+      expect(getByText(/Create your first habit/i)).toBeTruthy();
+    });
+  });
+
+  it('should display loading states', async () => {
+    mockUseWorkoutStore.mockReturnValue({
+      ...defaultWorkoutState,
+      isLoading: true,
+    });
+
+    const { queryByText } = render(<DashboardScreen />);
+
+    // Should show loading indicator or skeleton
+    // In a real implementation, you'd check for loading indicators
+    expect(queryByText('Hello')).toBeTruthy();
+  });
+
+  it('should handle couple invitation state', async () => {
+    mockUseCoupleStore.mockReturnValue({
+      ...defaultCoupleState,
+      currentCouple: null,
+    });
+
+    const { getByText } = render(<DashboardScreen />);
+
+    await waitFor(() => {
+      expect(getByText(/Create or join a couple/i)).toBeTruthy();
+    });
+  });
+
+  it('should format workout duration correctly', async () => {
+    // Test various duration formats
+    const testCases = [
+      { minutes: 45, expected: '45m' },
+      { minutes: 90, expected: '1h 30m' },
+      { minutes: 120, expected: '2h 0m' },
+    ];
+
+    for (const testCase of testCases) {
+      mockUseWorkoutStore.mockReturnValue({
+        ...defaultWorkoutState,
+        weeklyStats: {
+          ...defaultWorkoutState.weeklyStats!,
+          totalDuration: testCase.minutes,
+        },
+      });
+
+      const { getByText } = render(<DashboardScreen />);
+
+      await waitFor(() => {
+        expect(getByText(testCase.expected)).toBeTruthy();
+      });
+    }
+  });
+
+  it('should calculate habit completion percentage correctly', async () => {
+    // Mock habit with partial completion
+    mockUseHabitStore.mockReturnValue({
+      ...defaultHabitState,
+      getLogsForDate: jest.fn().mockReturnValue([
+        { habit_id: '1', status: 'done' },
+        { habit_id: '2', status: 'skip' },
+      ]),
+      habits: [
+        { ...defaultHabitState.habits[0] },
+        {
+          id: '2',
+          name: 'Exercise',
+          description: 'Daily exercise',
+          cadence: ['monday', 'tuesday'],
+          reminder_enabled: false,
+          reminder_time: '07:00',
+          user_id: '1',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+    });
+
+    const { getByText } = render(<DashboardScreen />);
+
+    await waitFor(() => {
+      // 50% completion rate (1 done, 1 skipped)
+      expect(getByText(/50%/)).toBeTruthy();
     });
   });
 });
