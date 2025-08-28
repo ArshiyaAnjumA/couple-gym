@@ -122,6 +122,22 @@ yarn test:ci
 
 ## 📱 EAS Build & Deployment
 
+### Build Status
+✅ **Backend**: Fully functional and tested  
+✅ **Frontend**: Complete with all Phase 2 features  
+✅ **Testing**: Jest + RNTL + MSW suite implemented (≥80% coverage target)  
+✅ **Configuration**: EAS configuration ready  
+
+### EAS Build URLs
+> **Note**: To generate actual builds, you need to login to EAS and run the build commands below.
+
+#### iOS Builds
+- **TestFlight Build**: `eas build --platform ios --profile preview`  
+- **Simulator Build**: `eas build --platform ios --profile ios-simulator`  
+
+#### Android Builds
+- **Google Play AAB**: `eas build --platform android --profile android-internal`
+
 ### Initial EAS Setup
 ```bash
 cd frontend
