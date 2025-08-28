@@ -61,7 +61,16 @@ class FrontendIntegrationTester:
                 if "access_token" in data:
                     self.token = data["access_token"]
                     self.log("✅ Authentication successful")
-                    return True
+                    
+                    # Verify token works by testing /me endpoint
+                    me_response = self.make_request("GET", "/me", token=self.token)
+                    if me_response.status_code == 200:
+                        user_data = me_response.json()
+                        self.log(f"✅ Token verification successful - User: {user_data.get('email')}")
+                        return True
+                    else:
+                        self.log(f"❌ Token verification failed: {me_response.status_code}", "ERROR")
+                        return False
                 else:
                     self.log("❌ Authentication response missing token", "ERROR")
                     return False
