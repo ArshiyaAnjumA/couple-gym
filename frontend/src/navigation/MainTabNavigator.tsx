@@ -60,9 +60,9 @@ export default function MainTabNavigator() {
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Workouts" component={WorkoutNavigator} />
-      <Tab.Screen name="Habits" component={HabitsScreen} />
+      <Tab.Screen name="Habits" component={HabitNavigator} />
       <Tab.Screen name="Progress" component={ProgressScreen} />
-      <Tab.Screen name="Couple" component={CoupleScreen} />
+      <Tab.Screen name="Couple" component={CoupleNavigator} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
