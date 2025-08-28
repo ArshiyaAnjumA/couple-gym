@@ -357,20 +357,25 @@ class CouplesWorkoutAPITester:
                 success = False
                 
             # Test create workout session (gym mode)
-            session_data = {
+            exercises_performed = [
+                {"name": "Bench Press", "sets": 3, "reps": 10, "weight_kg": 82.5},
+                {"name": "Shoulder Press", "sets": 3, "reps": 12, "weight_kg": 42.5}
+            ]
+            
+            session_params = {
                 "mode": "gym",
-                "template_id": self.test_data.get("template_id"),
                 "notes": "Great workout today!",
-                "exercises_performed": [
-                    {"name": "Bench Press", "sets": 3, "reps": 10, "weight_kg": 82.5},
-                    {"name": "Shoulder Press", "sets": 3, "reps": 12, "weight_kg": 42.5}
-                ],
                 "start_time": datetime.utcnow().isoformat(),
                 "end_time": (datetime.utcnow() + timedelta(hours=1)).isoformat()
             }
             
+            if "template_id" in self.test_data:
+                session_params["template_id"] = str(self.test_data["template_id"])
+            
             response = self.make_request("POST", "/workout-sessions/", 
-                                       token=self.tokens["alex"], json=session_data)
+                                       token=self.tokens["alex"], 
+                                       params=session_params,
+                                       json=exercises_performed)
             
             if response.status_code == 200:
                 session = response.json()
