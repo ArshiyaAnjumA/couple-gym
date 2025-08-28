@@ -14,12 +14,23 @@ from app.core.database import engine, Base
 # Import all models to ensure they're registered with SQLAlchemy
 from app.models import *
 
+# Import routers
+from app.routers.auth import router as auth_router
+from app.routers.users import router as users_router
+from app.routers.couples import router as couples_router
+from app.routers.workouts import workout_router
+from app.routers.habits import router as habits_router
+from app.routers.progress import router as progress_router
+from app.routers.share import router as share_router
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
 # Create FastAPI application
 app = FastAPI(
     title=settings.APP_NAME,
+    description="CouplesWorkout API - A fitness tracking app for couples",
+    version="1.0.0",
     debug=settings.DEBUG,
 )
 
@@ -32,54 +43,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Basic health check endpoint
+# Include routers with /api prefix
+app.include_router(auth_router, prefix="/api")
+app.include_router(users_router, prefix="/api") 
+app.include_router(couples_router, prefix="/api")
+app.include_router(workout_router, prefix="/api")
+app.include_router(habits_router, prefix="/api")
+app.include_router(progress_router, prefix="/api")
+app.include_router(share_router, prefix="/api")
+
+# Health check endpoint
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "app": settings.APP_NAME}
+    return {
+        "status": "healthy", 
+        "app": settings.APP_NAME,
+        "version": "1.0.0",
+        "database": "connected"
+    }
 
 @app.get("/api/")
 async def root():
-    return {"message": "CouplesWorkout API", "version": "1.0.0"}
-
-# Placeholder for auth endpoints
-@app.post("/api/auth/register")
-async def register():
-    return {"message": "Registration endpoint - to be implemented"}
-
-@app.post("/api/auth/login")
-async def login():
-    return {"message": "Login endpoint - to be implemented"}
-
-@app.get("/api/me")
-async def get_current_user():
-    return {"message": "Get current user - to be implemented"}
-
-# Placeholder for workout endpoints
-@app.get("/api/workout-templates")
-async def get_workout_templates():
-    return {"message": "Get workout templates - to be implemented"}
-
-@app.post("/api/workout-sessions")
-async def create_workout_session():
-    return {"message": "Create workout session - to be implemented"}
-
-# Placeholder for habit endpoints
-@app.get("/api/habits")
-async def get_habits():
-    return {"message": "Get habits - to be implemented"}
-
-@app.post("/api/habits")
-async def create_habit():
-    return {"message": "Create habit - to be implemented"}
-
-# Placeholder for couple endpoints
-@app.post("/api/couples")
-async def create_couple():
-    return {"message": "Create couple - to be implemented"}
-
-@app.get("/api/couples/{couple_id}/members")
-async def get_couple_members():
-    return {"message": "Get couple members - to be implemented"}
+    return {
+        "message": "CouplesWorkout API", 
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/api/health"
+    }
 
 if __name__ == "__main__":
     import uvicorn
