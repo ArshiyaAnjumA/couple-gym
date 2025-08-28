@@ -8,7 +8,8 @@ beforeEach(() => {
   const { getState } = useWorkoutStore;
   act(() => {
     getState().templates = [];
-    getState().sessions = [];
+    getState().myTemplates = [];
+    getState().systemTemplates = [];
     getState().currentSession = null;
     getState().weeklyStats = null;
     getState().error = null;
@@ -17,12 +18,12 @@ beforeEach(() => {
 });
 
 describe('useWorkoutStore', () => {
-  describe('fetchMyTemplates', () => {
+  describe('fetchTemplates', () => {
     it('should fetch templates successfully', async () => {
       const { result } = renderHook(() => useWorkoutStore());
 
       await act(async () => {
-        await result.current.fetchMyTemplates();
+        await result.current.fetchTemplates();
       });
 
       expect(result.current.templates.length).toBeGreaterThan(0);
@@ -42,7 +43,7 @@ describe('useWorkoutStore', () => {
     it('should handle fetch failure', async () => {
       // Mock failed fetch
       server.use(
-        http.get('/api/workouts/templates', () => {
+        http.get('/api/workout-templates', () => {
           return new HttpResponse(null, { status: 500 });
         })
       );
@@ -50,7 +51,7 @@ describe('useWorkoutStore', () => {
       const { result } = renderHook(() => useWorkoutStore());
 
       await act(async () => {
-        await result.current.fetchMyTemplates();
+        await result.current.fetchTemplates();
       });
 
       expect(result.current.templates).toEqual([]);
@@ -85,7 +86,7 @@ describe('useWorkoutStore', () => {
     it('should handle create failure', async () => {
       // Mock failed create
       server.use(
-        http.post('/api/workouts/templates', () => {
+        http.post('/api/workout-templates', () => {
           return new HttpResponse(null, { status: 400 });
         })
       );
@@ -100,7 +101,11 @@ describe('useWorkoutStore', () => {
       };
 
       await act(async () => {
-        await result.current.createTemplate(newTemplate);
+        try {
+          await result.current.createTemplate(newTemplate);
+        } catch (error) {
+          // Expected to throw
+        }
       });
 
       expect(result.current.templates).toEqual([]);
@@ -187,25 +192,16 @@ describe('useWorkoutStore', () => {
 
       // Update session with exercise data
       const updatedSession = {
-        ...result.current.currentSession!,
-        exercises: [
-          {
-            name: 'Bench Press',
-            sets: [
-              { reps: 10, weight: 135, completed: true },
-              { reps: 10, weight: 135, completed: true },
-              { reps: 8, weight: 135, completed: true },
-            ]
-          }
-        ]
+        notes: 'Great workout session!',
+        end_time: new Date().toISOString(),
       };
 
       act(() => {
         result.current.updateCurrentSession(updatedSession);
       });
 
-      expect(result.current.currentSession?.exercises[0].sets?.length).toBe(3);
-      expect(result.current.currentSession?.exercises[0].sets?.[0].completed).toBe(true);
+      expect(result.current.currentSession?.notes).toBe('Great workout session!');
+      expect(result.current.currentSession?.end_time).toBeTruthy();
     });
 
     it('should finish session successfully', async () => {
@@ -231,7 +227,6 @@ describe('useWorkoutStore', () => {
       });
 
       expect(result.current.currentSession).toBeNull();
-      expect(result.current.sessions.length).toBe(1);
     });
   });
 
@@ -278,7 +273,7 @@ describe('useWorkoutStore', () => {
 
       // Start fetch
       act(() => {
-        result.current.fetchMyTemplates();
+        result.current.fetchTemplates();
       });
 
       expect(result.current.isLoading).toBe(true);
