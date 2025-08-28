@@ -8,7 +8,7 @@ beforeEach(() => {
   const { getState } = useHabitStore;
   act(() => {
     getState().habits = [];
-    getState().logs = [];
+    getState().logsIndexByDate = {};
     getState().error = null;
     getState().isLoading = false;
   });
@@ -28,10 +28,10 @@ describe('useHabitStore', () => {
         id: expect.any(String),
         name: expect.any(String),
         description: expect.any(String),
-        cadence: expect.any(Array),
+        cadence: expect.any(String),
         reminder_enabled: expect.any(Boolean),
-        reminder_time: expect.any(String),
-        user_id: expect.any(String),
+        reminder_time_local: expect.any(String),
+        is_active: expect.any(Boolean),
         created_at: expect.any(String),
         updated_at: expect.any(String),
       });
@@ -41,7 +41,7 @@ describe('useHabitStore', () => {
     it('should handle fetch failure', async () => {
       // Mock failed fetch
       server.use(
-        http.get('/api/habits/', () => {
+        http.get('/api/habits', () => {
           return new HttpResponse(null, { status: 500 });
         })
       );
@@ -64,9 +64,9 @@ describe('useHabitStore', () => {
       const newHabit = {
         name: 'Morning Exercise',
         description: 'Do 30 minutes of exercise every morning',
-        cadence: ['monday', 'wednesday', 'friday'],
+        cadence: 'daily' as const,
         reminder_enabled: true,
-        reminder_time: '07:30',
+        reminder_time_local: '07:30',
       };
 
       await act(async () => {
@@ -81,7 +81,7 @@ describe('useHabitStore', () => {
     it('should handle create failure', async () => {
       // Mock failed create
       server.use(
-        http.post('/api/habits/', () => {
+        http.post('/api/habits', () => {
           return new HttpResponse(null, { status: 400 });
         })
       );
@@ -91,13 +91,17 @@ describe('useHabitStore', () => {
       const newHabit = {
         name: '',
         description: 'Invalid habit',
-        cadence: [],
+        cadence: 'daily' as const,
         reminder_enabled: false,
-        reminder_time: '08:00',
+        reminder_time_local: '08:00',
       };
 
       await act(async () => {
-        await result.current.createHabit(newHabit);
+        try {
+          await result.current.createHabit(newHabit);
+        } catch (error) {
+          // Expected to throw
+        }
       });
 
       expect(result.current.habits).toEqual([]);
@@ -113,9 +117,9 @@ describe('useHabitStore', () => {
       const newHabit = {
         name: 'Original Name',
         description: 'Original description',
-        cadence: ['monday'],
+        cadence: 'daily' as const,
         reminder_enabled: false,
-        reminder_time: '09:00',
+        reminder_time_local: '09:00',
       };
 
       await act(async () => {
@@ -126,9 +130,9 @@ describe('useHabitStore', () => {
       const updatedData = {
         name: 'Updated Name',
         description: 'Updated description',
-        cadence: ['monday', 'tuesday'],
+        cadence: 'weekly' as const,
         reminder_enabled: true,
-        reminder_time: '10:00',
+        reminder_time_local: '10:00',
       };
 
       await act(async () => {
@@ -137,7 +141,7 @@ describe('useHabitStore', () => {
 
       const updatedHabit = result.current.habits[0];
       expect(updatedHabit.name).toBe('Updated Name');
-      expect(updatedHabit.cadence).toEqual(['monday', 'tuesday']);
+      expect(updatedHabit.cadence).toBe('weekly');
       expect(updatedHabit.reminder_enabled).toBe(true);
     });
   });
@@ -150,9 +154,9 @@ describe('useHabitStore', () => {
       const newHabit = {
         name: 'To Delete',
         description: 'This will be deleted',
-        cadence: ['monday'],
+        cadence: 'daily' as const,
         reminder_enabled: false,
-        reminder_time: '09:00',
+        reminder_time_local: '09:00',
       };
 
       await act(async () => {
@@ -175,28 +179,34 @@ describe('useHabitStore', () => {
       const { result } = renderHook(() => useHabitStore());
 
       const habitId = 'test-habit-id';
-      const date = '2024-01-01';
+      const logData = {
+        date: '2024-01-01',
+        status: 'done' as const,
+      };
 
       await act(async () => {
-        await result.current.logHabit(habitId, date, 'done');
+        await result.current.logHabit(habitId, logData);
       });
 
-      const log = result.current.getLogForDate(habitId, date);
-      expect(log?.status).toBe('done');
+      const logs = result.current.getLogsForDate('2024-01-01');
+      expect(logs.find(l => l.habit_id === habitId)?.status).toBe('done');
     });
 
     it('should log habit as skipped', async () => {
       const { result } = renderHook(() => useHabitStore());
 
       const habitId = 'test-habit-id';
-      const date = '2024-01-01';
+      const logData = {
+        date: '2024-01-01',
+        status: 'skipped' as const,
+      };
 
       await act(async () => {
-        await result.current.logHabit(habitId, date, 'skip');
+        await result.current.logHabit(habitId, logData);
       });
 
-      const log = result.current.getLogForDate(habitId, date);
-      expect(log?.status).toBe('skip');
+      const logs = result.current.getLogsForDate('2024-01-01');
+      expect(logs.find(l => l.habit_id === habitId)?.status).toBe('skipped');
     });
   });
 
@@ -209,14 +219,14 @@ describe('useHabitStore', () => {
       const habitId2 = 'habit-2';
 
       await act(async () => {
-        await result.current.logHabit(habitId1, date, 'done');
-        await result.current.logHabit(habitId2, date, 'skip');
+        await result.current.logHabit(habitId1, { date, status: 'done' });
+        await result.current.logHabit(habitId2, { date, status: 'skipped' });
       });
 
       const logs = result.current.getLogsForDate(date);
       expect(logs.length).toBe(2);
       expect(logs.find(l => l.habit_id === habitId1)?.status).toBe('done');
-      expect(logs.find(l => l.habit_id === habitId2)?.status).toBe('skip');
+      expect(logs.find(l => l.habit_id === habitId2)?.status).toBe('skipped');
     });
   });
 
@@ -227,9 +237,9 @@ describe('useHabitStore', () => {
       const habitId = 'test-habit';
       
       await act(async () => {
-        await result.current.logHabit(habitId, '2024-01-01', 'done');
-        await result.current.logHabit(habitId, '2024-01-02', 'skip');
-        await result.current.logHabit(habitId, '2024-01-03', 'done');
+        await result.current.logHabit(habitId, { date: '2024-01-01', status: 'done' });
+        await result.current.logHabit(habitId, { date: '2024-01-02', status: 'skipped' });
+        await result.current.logHabit(habitId, { date: '2024-01-03', status: 'done' });
       });
 
       const logs = result.current.getHabitLogsForDateRange(habitId, '2024-01-01', '2024-01-03');
