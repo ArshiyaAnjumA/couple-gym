@@ -505,14 +505,14 @@ class CouplesWorkoutAPITester:
             # Test create habit log
             if "habit_id" in self.test_data:
                 habit_id = self.test_data["habit_id"]
-                log_data = {
-                    "log_date": date.today().isoformat(),
-                    "status": "done",
-                    "notes": "Completed successfully!"
-                }
                 
                 response = self.make_request("POST", f"/habits/{habit_id}/logs", 
-                                           token=self.tokens["sam"], json=log_data)
+                                           token=self.tokens["sam"], 
+                                           params={
+                                               "log_date": date.today().isoformat(),
+                                               "status": "done",
+                                               "notes": "Completed successfully!"
+                                           })
                 
                 if response.status_code == 200:
                     log = response.json()
