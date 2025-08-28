@@ -225,7 +225,6 @@ export const useAuthStore = create<AuthStore>()(
           state.user = user;
         });
       },
-    })),
-    { name: 'auth' }
-  )
+    };
+  })
 );
