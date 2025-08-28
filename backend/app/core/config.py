@@ -1,9 +1,15 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 import os
 from pathlib import Path
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=Path(__file__).parent.parent.parent / ".env",
+        case_sensitive=True,
+        extra="ignore"
+    )
+    
     # App Configuration
     APP_NAME: str = "CouplesWorkout"
     DEBUG: bool = True
@@ -24,10 +30,5 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_WINDOW: int = 60
-
-    class Config:
-        env_file = Path(__file__).parent.parent.parent / ".env"
-        case_sensitive = True
-        extra = "ignore"  # Ignore extra fields from .env file
 
 settings = Settings()
