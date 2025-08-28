@@ -1,91 +1,108 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
-import { AppNavigator } from '../../navigation/AppNavigator';
+import { render } from '@testing-library/react-native';
+import AppNavigator from '../../navigation/AppNavigator';
 import { useAuthStore } from '../../store/auth';
 
-// Mock the auth store
+// Mock navigation components
+jest.mock('../../navigation/AuthNavigator', () => {
+  return function MockAuthNavigator() {
+    return <MockedComponent testID="auth-navigator">Auth Navigator</MockedComponent>;
+  };
+});
+
+jest.mock('../../navigation/MainTabNavigator', () => {
+  return function MockMainTabNavigator() {
+    return <MockedComponent testID="main-tab-navigator">Main Tab Navigator</MockedComponent>;
+  };
+});
+
+// Mock component for React Native
+function MockedComponent({ children, testID }: { children: string; testID: string }) {
+  return React.createElement('View', { testID }, children);
+}
+
+// Mock auth store
 jest.mock('../../store/auth');
 const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>;
-
-// Mock navigation components
-jest.mock('../../navigation/AuthNavigator', () => ({
-  AuthNavigator: () => <div testID="auth-navigator">Auth Navigator</div>,
-}));
-
-jest.mock('../../navigation/MainTabNavigator', () => ({
-  MainTabNavigator: () => <div testID="main-tab-navigator">Main Tab Navigator</div>,
-}));
 
 describe('AppNavigator', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should render AuthNavigator when user is not authenticated', () => {
+  it('should render AuthNavigator when not authenticated', () => {
     mockUseAuthStore.mockReturnValue({
-      user: null,
       isAuthenticated: false,
       isLoading: false,
+      user: null,
+      tokens: null,
       error: null,
       login: jest.fn(),
       register: jest.fn(),
-      loginWithApple: jest.fn(),
       logout: jest.fn(),
-      checkAuthStatus: jest.fn(),
+      loginWithApple: jest.fn(),
+      refreshAccessToken: jest.fn(),
       clearError: jest.fn(),
-      setUser: jest.fn(),
+      checkAuthStatus: jest.fn(),
     });
 
-    render(<AppNavigator />);
+    const { getByTestId, queryByTestId } = render(<AppNavigator />);
 
-    expect(screen.getByTestId('auth-navigator')).toBeTruthy();
-    expect(screen.queryByTestId('main-tab-navigator')).toBeNull();
+    expect(getByTestId('auth-navigator')).toBeTruthy();
+    expect(queryByTestId('main-tab-navigator')).toBeNull();
   });
 
-  it('should render MainTabNavigator when user is authenticated', () => {
+  it('should render MainTabNavigator when authenticated', () => {
     mockUseAuthStore.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
       user: {
         id: '1',
         email: 'test@example.com',
-        name: 'Test User',
+        full_name: 'Test User',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
       },
-      isAuthenticated: true,
-      isLoading: false,
+      tokens: {
+        access_token: 'mock-token',
+        refresh_token: 'mock-refresh-token',
+        token_type: 'bearer',
+      },
       error: null,
       login: jest.fn(),
       register: jest.fn(),
-      loginWithApple: jest.fn(),
       logout: jest.fn(),
-      checkAuthStatus: jest.fn(),
+      loginWithApple: jest.fn(),
+      refreshAccessToken: jest.fn(),
       clearError: jest.fn(),
-      setUser: jest.fn(),
+      checkAuthStatus: jest.fn(),
     });
 
-    render(<AppNavigator />);
+    const { getByTestId, queryByTestId } = render(<AppNavigator />);
 
-    expect(screen.getByTestId('main-tab-navigator')).toBeTruthy();
-    expect(screen.queryByTestId('auth-navigator')).toBeNull();
+    expect(getByTestId('main-tab-navigator')).toBeTruthy();
+    expect(queryByTestId('auth-navigator')).toBeNull();
   });
 
-  it('should show loading state when authentication is loading', () => {
+  it('should not render anything when loading', () => {
     mockUseAuthStore.mockReturnValue({
-      user: null,
       isAuthenticated: false,
       isLoading: true,
+      user: null,
+      tokens: null,
       error: null,
       login: jest.fn(),
       register: jest.fn(),
-      loginWithApple: jest.fn(),
       logout: jest.fn(),
-      checkAuthStatus: jest.fn(),
+      loginWithApple: jest.fn(),
+      refreshAccessToken: jest.fn(),
       clearError: jest.fn(),
-      setUser: jest.fn(),
+      checkAuthStatus: jest.fn(),
     });
 
-    render(<AppNavigator />);
+    const { container } = render(<AppNavigator />);
 
-    expect(screen.getByTestId('loading-indicator')).toBeTruthy();
-    expect(screen.queryByTestId('auth-navigator')).toBeNull();
-    expect(screen.queryByTestId('main-tab-navigator')).toBeNull();
+    // Should render nothing (null) when loading
+    expect(container.children.length).toBe(0);
   });
 });
