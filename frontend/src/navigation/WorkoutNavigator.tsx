@@ -6,6 +6,7 @@ import TemplatesListScreen from '../screens/workouts/TemplatesListScreen';
 import TemplateCreateEditScreen from '../screens/workouts/TemplateCreateEditScreen';
 import SessionStartScreen from '../screens/workouts/SessionStartScreen';
 import SessionTrackScreen from '../screens/workouts/SessionTrackScreen';
+import SessionSummaryScreen from '../screens/workouts/SessionSummaryScreen';
 
 export type WorkoutStackParamList = {
   WorkoutsScreen: undefined;
@@ -32,6 +33,7 @@ export default function WorkoutNavigator() {
       <Stack.Screen name="TemplateCreateEdit" component={TemplateCreateEditScreen} />
       <Stack.Screen name="SessionStart" component={SessionStartScreen} />
       <Stack.Screen name="SessionTrack" component={SessionTrackScreen} />
+      <Stack.Screen name="SessionSummary" component={SessionSummaryScreen} />
     </Stack.Navigator>
   );
 }
