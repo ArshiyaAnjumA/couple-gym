@@ -314,18 +314,19 @@ class CouplesWorkoutAPITester:
         
         try:
             # Test create workout template
-            template_data = {
-                "name": "Push Day Workout",
-                "workout_type": "gym",
-                "exercises": [
-                    {"name": "Bench Press", "sets": 3, "reps": 10, "weight_kg": 80.0},
-                    {"name": "Shoulder Press", "sets": 3, "reps": 12, "weight_kg": 40.0},
-                    {"name": "Push-ups", "sets": 2, "reps": 15}
-                ]
-            }
+            exercises_data = [
+                {"name": "Bench Press", "sets": 3, "reps": 10, "weight_kg": 80.0},
+                {"name": "Shoulder Press", "sets": 3, "reps": 12, "weight_kg": 40.0},
+                {"name": "Push-ups", "sets": 2, "reps": 15}
+            ]
             
             response = self.make_request("POST", "/workout-templates/", 
-                                       token=self.tokens["alex"], json=template_data)
+                                       token=self.tokens["alex"], 
+                                       params={
+                                           "name": "Push Day Workout",
+                                           "workout_type": "gym"
+                                       },
+                                       json=exercises_data)
             
             if response.status_code == 200:
                 template = response.json()
