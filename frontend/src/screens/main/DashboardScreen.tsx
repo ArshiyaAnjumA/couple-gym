@@ -1,13 +1,50 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '../../store/auth';
+import { useWorkoutStore } from '../../store/workout';
+import { useHabitStore } from '../../store/habit';
+import { useCoupleStore } from '../../store/couple';
+import { Ionicons } from '@expo/vector-icons';
+import { format, startOfWeek, addDays } from 'date-fns';
 
 export default function DashboardScreen() {
   const { user, logout, checkAuthStatus } = useAuthStore();
+  const { weeklyStats, fetchWeeklyStats, isLoading: workoutLoading } = useWorkoutStore();
+  const { habits, logsIndexByDate, fetchHabits, fetchLogs, getLogsForDate, isLoading: habitLoading } = useHabitStore();
+  const { couple, members, settings, sharedFeed, fetchCoupleInfo, fetchSharedFeed } = useCoupleStore();
+  
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     checkAuthStatus();
+    loadDashboardData();
   }, [checkAuthStatus]);
+
+  const loadDashboardData = async () => {
+    // Load workout stats
+    fetchWeeklyStats();
+    
+    // Load habits and current week logs
+    fetchHabits();
+    const weekStart = startOfWeek(new Date());
+    const weekEnd = addDays(weekStart, 6);
+    fetchLogs(
+      format(weekStart, 'yyyy-MM-dd'),
+      format(weekEnd, 'yyyy-MM-dd')
+    );
+    
+    // Load couple info and shared feed
+    fetchCoupleInfo();
+  };
+
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await loadDashboardData();
+    if (couple) {
+      await fetchSharedFeed();
+    }
+    setIsRefreshing(false);
+  };
 
   const handleLogout = async () => {
     Alert.alert(
@@ -30,9 +67,43 @@ export default function DashboardScreen() {
     );
   };
 
+  // Calculate habit completion for today
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const todayLogs = getLogsForDate(today);
+  const completedHabitsToday = todayLogs.filter(log => log.status === 'done').length;
+  const activeHabits = habits.filter(h => h.is_active);
+  
+  // Calculate weekly habit completion rate
+  const weekStart = startOfWeek(new Date());
+  const weekEnd = addDays(weekStart, 6);
+  let weeklyHabitCompletions = 0;
+  let weeklyHabitTotal = 0;
+  
+  for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+    const dateStr = format(d, 'yyyy-MM-dd');
+    const dayLogs = getLogsForDate(dateStr);
+    weeklyHabitCompletions += dayLogs.filter(log => log.status === 'done').length;
+    weeklyHabitTotal += activeHabits.length;
+  }
+  
+  const weeklyHabitRate = weeklyHabitTotal > 0 ? Math.round((weeklyHabitCompletions / weeklyHabitTotal) * 100) : 0;
+  
+  // Get partner info
+  const partner = members.find(member => member.user_id !== user?.id);
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor="#007AFF"
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Dashboard</Text>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -42,35 +113,155 @@ export default function DashboardScreen() {
         
         <View style={styles.welcomeCard}>
           <Text style={styles.welcomeTitle}>Welcome back, {user?.full_name}!</Text>
-          <Text style={styles.welcomeSubtitle}>Ready to continue your fitness journey?</Text>
+          <Text style={styles.welcomeSubtitle}>
+            {partner 
+              ? `Ready to continue your fitness journey with ${partner.user.full_name}?`
+              : "Ready to continue your fitness journey?"
+            }
+          </Text>
         </View>
 
+        {/* Quick Stats */}
         <View style={styles.statsContainer}>
-          <Text style={styles.sectionTitle}>Quick Stats</Text>
+          <Text style={styles.sectionTitle}>This Week</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>0</Text>
+              {workoutLoading ? (
+                <ActivityIndicator size="small" color="#007AFF" />
+              ) : (
+                <Text style={styles.statNumber}>{weeklyStats?.sessions_count || 0}</Text>
+              )}
               <Text style={styles.statLabel}>Workouts</Text>
+              <Text style={styles.statSubLabel}>
+                {weeklyStats?.total_duration 
+                  ? `${Math.round(weeklyStats.total_duration / 60)}min total`
+                  : 'Get started!'
+                }
+              </Text>
             </View>
+            
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>0</Text>
+              {habitLoading ? (
+                <ActivityIndicator size="small" color="#34C759" />
+              ) : (
+                <Text style={styles.statNumber}>{weeklyHabitRate}%</Text>
+              )}
               <Text style={styles.statLabel}>Habits</Text>
+              <Text style={styles.statSubLabel}>
+                {completedHabitsToday}/{activeHabits.length} today
+              </Text>
+            </View>
+            
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>
+                {weeklyStats?.total_volume 
+                  ? `${Math.round(weeklyStats.total_volume / 1000)}k`
+                  : '0'
+                }
+              </Text>
+              <Text style={styles.statLabel}>Volume</Text>
+              <Text style={styles.statSubLabel}>kg lifted</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.placeholder}>
-          <Text style={styles.placeholderText}>
-            🚧 Dashboard features coming in Phase 2
-          </Text>
-          <Text style={styles.placeholderSubtext}>
-            • Weekly workout summary{'\n'}
-            • Habit completion streak{'\n'}
-            • Partner progress sharing{'\n'}
-            • Progress charts
-          </Text>
+        {/* Partner Section */}
+        {partner && (settings?.share_progress_enabled || settings?.share_habits_enabled) && (
+          <View style={styles.partnerSection}>
+            <Text style={styles.sectionTitle}>Partner Activity</Text>
+            
+            <View style={styles.partnerCard}>
+              <View style={styles.partnerHeader}>
+                <View style={styles.partnerAvatar}>
+                  <Text style={styles.partnerInitial}>
+                    {partner.user.full_name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.partnerInfo}>
+                  <Text style={styles.partnerName}>{partner.user.full_name}</Text>
+                  <Text style={styles.partnerStatus}>
+                    {sharedFeed.length > 0 
+                      ? `Last active ${format(new Date(sharedFeed[0].created_at), 'MMM d')}`
+                      : 'No recent activity'
+                    }
+                  </Text>
+                </View>
+                <Ionicons name="heart" size={20} color="#FF3B30" />
+              </View>
+              
+              {sharedFeed.length > 0 ? (
+                <View style={styles.recentActivity}>
+                  <Text style={styles.activityTitle}>Recent Activity</Text>
+                  {sharedFeed.slice(0, 3).map((item) => (
+                    <View key={item.id} style={styles.activityItem}>
+                      <Ionicons 
+                        name={
+                          item.type === 'workout' ? 'fitness' :
+                          item.type === 'habit' ? 'checkmark-circle' : 'analytics'
+                        } 
+                        size={14} 
+                        color="#007AFF" 
+                      />
+                      <Text style={styles.activityText}>{item.content}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.noActivity}>
+                  <Text style={styles.noActivityText}>
+                    No shared activities yet. Encourage each other to get started!
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          
+          <View style={styles.actionsGrid}>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="add" size={20} color="#007AFF" />
+              <Text style={styles.actionButtonText}>Start Workout</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+              <Text style={styles.actionButtonText}>Log Habits</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+
+        {/* Motivational Section */}
+        <View style={styles.motivationSection}>
+          {weeklyStats && weeklyStats.sessions_count > 0 ? (
+            <>
+              <Text style={styles.motivationTitle}>🔥 You're on fire!</Text>
+              <Text style={styles.motivationText}>
+                {weeklyStats.sessions_count} workout{weeklyStats.sessions_count !== 1 ? 's' : ''} this week. 
+                Keep up the momentum!
+              </Text>
+            </>
+          ) : completedHabitsToday > 0 ? (
+            <>
+              <Text style={styles.motivationTitle}>✨ Great habits!</Text>
+              <Text style={styles.motivationText}>
+                {completedHabitsToday} habit{completedHabitsToday !== 1 ? 's' : ''} completed today. 
+                Small steps lead to big changes!
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.motivationTitle}>🌟 Ready to start?</Text>
+              <Text style={styles.motivationText}>
+                Every journey begins with a single step. Start with a quick workout or mark off a habit!
+              </Text>
+            </>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
