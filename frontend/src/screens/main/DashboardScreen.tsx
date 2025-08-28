@@ -272,9 +272,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
   },
   content: {
-    flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 32,
   },
   header: {
     flexDirection: 'row',
@@ -317,9 +317,10 @@ const styles = StyleSheet.create({
   welcomeSubtitle: {
     fontSize: 16,
     color: '#6E6E73',
+    lineHeight: 22,
   },
   statsContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 20,
@@ -329,10 +330,144 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
   },
   statCard: {
     flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#1D1D1F',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  statSubLabel: {
+    fontSize: 12,
+    color: '#6E6E73',
+    textAlign: 'center',
+  },
+  partnerSection: {
+    marginBottom: 24,
+  },
+  partnerCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  partnerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  partnerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  partnerInitial: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  partnerInfo: {
+    flex: 1,
+  },
+  partnerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1D1D1F',
+  },
+  partnerStatus: {
+    fontSize: 14,
+    color: '#6E6E73',
+  },
+  recentActivity: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  activityTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1D1D1F',
+    marginBottom: 8,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  activityText: {
+    fontSize: 14,
+    color: '#6E6E73',
+    flex: 1,
+  },
+  noActivity: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+    alignItems: 'center',
+  },
+  noActivityText: {
+    fontSize: 14,
+    color: '#6E6E73',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  quickActions: {
+    marginBottom: 24,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1D1D1F',
+  },
+  motivationSection: {
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 20,
@@ -343,29 +478,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  statNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#6E6E73',
-  },
-  placeholder: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-  },
-  placeholderText: {
+  motivationTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#1D1D1F',
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  placeholderSubtext: {
+  motivationText: {
     fontSize: 14,
     color: '#6E6E73',
     textAlign: 'center',
