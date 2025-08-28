@@ -467,14 +467,13 @@ class CouplesWorkoutAPITester:
         
         try:
             # Test create habit
-            habit_data = {
-                "name": "Drink 8 glasses of water",
-                "cadence": "daily",
-                "reminder_time_local": "08:00"
-            }
-            
             response = self.make_request("POST", "/habits/", 
-                                       token=self.tokens["sam"], json=habit_data)
+                                       token=self.tokens["sam"], 
+                                       params={
+                                           "name": "Drink 8 glasses of water",
+                                           "cadence": "daily",
+                                           "reminder_time_local": "08:00"
+                                       })
             
             if response.status_code == 200:
                 habit = response.json()
