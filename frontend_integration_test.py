@@ -92,40 +92,40 @@ class FrontendIntegrationTester:
         
         try:
             # 1. GET /workout-templates (mine=true)
-            self.log("Testing GET /workout-templates?mine=true...")
-            response = self.make_request("GET", "/workout-templates", 
+            self.log("Testing GET /workout-templates/?mine=true...")
+            response = self.make_request("GET", "/workout-templates/", 
                                        token=self.token, 
                                        params={"mine": "true"})
             
             if response.status_code == 200:
                 my_templates = response.json()
-                self.log(f"✅ GET /workout-templates?mine=true successful - Found {len(my_templates)} templates")
+                self.log(f"✅ GET /workout-templates/?mine=true successful - Found {len(my_templates)} templates")
             else:
-                self.log(f"❌ GET /workout-templates?mine=true failed: {response.status_code}", "ERROR")
+                self.log(f"❌ GET /workout-templates/?mine=true failed: {response.status_code}", "ERROR")
                 success = False
                 
             # 2. GET /workout-templates (mine=false)
-            self.log("Testing GET /workout-templates?mine=false...")
-            response = self.make_request("GET", "/workout-templates", 
+            self.log("Testing GET /workout-templates/?mine=false...")
+            response = self.make_request("GET", "/workout-templates/", 
                                        token=self.token, 
                                        params={"mine": "false"})
             
             if response.status_code == 200:
                 public_templates = response.json()
-                self.log(f"✅ GET /workout-templates?mine=false successful - Found {len(public_templates)} templates")
+                self.log(f"✅ GET /workout-templates/?mine=false successful - Found {len(public_templates)} templates")
             else:
-                self.log(f"❌ GET /workout-templates?mine=false failed: {response.status_code}", "ERROR")
+                self.log(f"❌ GET /workout-templates/?mine=false failed: {response.status_code}", "ERROR")
                 success = False
                 
             # 3. POST /workout-templates (create custom template)
-            self.log("Testing POST /workout-templates (create custom template)...")
+            self.log("Testing POST /workout-templates/ (create custom template)...")
             exercises_data = [
                 {"name": "Deadlift", "sets": 3, "reps": 8, "weight_kg": 100.0},
                 {"name": "Barbell Row", "sets": 3, "reps": 10, "weight_kg": 70.0},
                 {"name": "Pull-ups", "sets": 3, "reps": 12}
             ]
             
-            response = self.make_request("POST", "/workout-templates", 
+            response = self.make_request("POST", "/workout-templates/", 
                                        token=self.token, 
                                        params={
                                            "name": "Pull Day - Frontend Test",
@@ -138,16 +138,16 @@ class FrontendIntegrationTester:
                 template_id = template.get("id")
                 if template_id:
                     self.test_data["template_id"] = template_id
-                    self.log("✅ POST /workout-templates successful - Template created")
+                    self.log("✅ POST /workout-templates/ successful - Template created")
                 else:
                     self.log("❌ Template creation missing ID", "ERROR")
                     success = False
             else:
-                self.log(f"❌ POST /workout-templates failed: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ POST /workout-templates/ failed: {response.status_code} - {response.text}", "ERROR")
                 success = False
                 
             # 4. POST /workout-sessions (start session)
-            self.log("Testing POST /workout-sessions (start session)...")
+            self.log("Testing POST /workout-sessions/ (start session)...")
             exercises_performed = [
                 {"name": "Deadlift", "sets": 3, "reps": 8, "weight_kg": 102.5},
                 {"name": "Barbell Row", "sets": 3, "reps": 10, "weight_kg": 72.5},
@@ -164,7 +164,7 @@ class FrontendIntegrationTester:
             if "template_id" in self.test_data:
                 session_params["template_id"] = str(self.test_data["template_id"])
             
-            response = self.make_request("POST", "/workout-sessions", 
+            response = self.make_request("POST", "/workout-sessions/", 
                                        token=self.token, 
                                        params=session_params,
                                        json=exercises_performed)
@@ -174,12 +174,12 @@ class FrontendIntegrationTester:
                 session_id = session.get("id")
                 if session_id:
                     self.test_data["session_id"] = session_id
-                    self.log("✅ POST /workout-sessions successful - Session created")
+                    self.log("✅ POST /workout-sessions/ successful - Session created")
                 else:
                     self.log("❌ Session creation missing ID", "ERROR")
                     success = False
             else:
-                self.log(f"❌ POST /workout-sessions failed: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ POST /workout-sessions/ failed: {response.status_code} - {response.text}", "ERROR")
                 success = False
                 
             # 5. PATCH /workout-sessions/{id} (finish session)
