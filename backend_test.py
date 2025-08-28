@@ -11,7 +11,7 @@ from datetime import datetime, date, timedelta
 from typing import Dict, Any, Optional
 
 # Configuration
-BASE_URL = "https://pairgym.preview.emergentagent.com/api"
+BASE_URL = "https://couple-fitness.preview.emergentagent.com/api"
 TIMEOUT = 30
 
 # Test users from seeded data
