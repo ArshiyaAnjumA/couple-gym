@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://duoworkout.preview.emergentagent.com';
+const API_BASE = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://duo-fitness.preview.emergentagent.com';
 
 // Mock data
 const mockUsers = {
