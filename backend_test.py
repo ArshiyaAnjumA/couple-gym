@@ -680,14 +680,13 @@ class CouplesWorkoutAPITester:
         
         try:
             # Test create share permissions (Alex shares with Sam)
-            permission_data = {
-                "viewer_email": "sam@example.com",
-                "can_view_progress": True,
-                "can_view_habits": False
-            }
-            
             response = self.make_request("POST", "/share/permissions", 
-                                       token=self.tokens["alex"], json=permission_data)
+                                       token=self.tokens["alex"], 
+                                       params={
+                                           "viewer_email": "sam@example.com",
+                                           "can_view_progress": True,
+                                           "can_view_habits": False
+                                       })
             
             if response.status_code == 200:
                 permission = response.json()
