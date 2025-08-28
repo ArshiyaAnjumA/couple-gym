@@ -528,13 +528,13 @@ class CouplesWorkoutAPITester:
             # Test update habit
             if "habit_id" in self.test_data:
                 habit_id = self.test_data["habit_id"]
-                update_data = {
-                    "name": "Drink 10 glasses of water",
-                    "reminder_time_local": "09:00"
-                }
                 
                 response = self.make_request("PATCH", f"/habits/{habit_id}", 
-                                           token=self.tokens["sam"], json=update_data)
+                                           token=self.tokens["sam"], 
+                                           params={
+                                               "name": "Drink 10 glasses of water",
+                                               "reminder_time_local": "09:00"
+                                           })
                 
                 if response.status_code == 200:
                     updated_habit = response.json()
