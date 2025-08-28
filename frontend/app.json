@@ -1,21 +1,26 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Couples Workout",
+    "slug": "couples-workout",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "couples-workout",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "description": "Track workouts & habits together as a couple. Stay motivated, stay connected.",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.emergent.couplesworkout",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#000"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#ffffff"
       },
+      "package": "com.emergent.couplesworkout",
+      "versionCode": 1,
       "edgeToEdgeEnabled": true
     },
     "web": {
@@ -35,6 +40,11 @@
       ],
       "expo-secure-store",
       "expo-apple-authentication"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "couples-workout-app"
+      }
+    }
   }
 }

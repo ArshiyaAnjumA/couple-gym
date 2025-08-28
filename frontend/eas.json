@@ -1,0 +1,43 @@
+{
+  "cli": {
+    "version": ">= 9.0.0"
+  },
+  "build": {
+    "preview": {
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "android": {
+        "resourceClass": "m-medium"
+      },
+      "env": {
+        "API_BASE_URL": "https://duo-fitness.preview.emergentagent.com/api",
+        "APPLE_SIGN_IN_ENABLED": "true"
+      }
+    },
+    "ios-simulator": {
+      "ios": {
+        "simulator": true,
+        "resourceClass": "m-medium"
+      },
+      "env": {
+        "API_BASE_URL": "https://duo-fitness.preview.emergentagent.com/api",
+        "APPLE_SIGN_IN_ENABLED": "true"
+      }
+    },
+    "android-internal": {
+      "android": {
+        "gradleCommand": ":app:bundleRelease"
+      },
+      "env": {
+        "API_BASE_URL": "https://duo-fitness.preview.emergentagent.com/api",
+        "APPLE_SIGN_IN_ENABLED": "false"
+      }
+    }
+  },
+  "submit": {
+    "android-internal": {
+      "track": "internal"
+    }
+  }
+}
